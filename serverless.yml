@@ -11,6 +11,9 @@ provider:
 package:
   individually: true
 
+plugins:
+  - serverless-scriptable-plugin
+
 functions:
   hello-world:
     handler: handler
@@ -20,3 +23,12 @@ functions:
       - http:
           path: /hello
           method: get
+
+custom:
+  scriptable:
+    hooks:
+      before:package:createDeploymentArtifacts:
+#       for windows
+        - build-and-zip.ps1
+      after:package:createDeploymentArtifacts:
+        - echo "Build and packaging complete"
