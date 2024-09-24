@@ -5,5 +5,6 @@ functions := $(shell find functions -name \*main.go | awk -F'/' '{print $$2}')
 
 build: ## Build golang binaries
 	@for function in $(functions) ; do \
-		env GOARCH=amd64 GOOS=linux go build -ldflags="-s -w" -o bin/$$function functions/$$function/main.go ; \
+		env GOARCH=amd64 GOOS=linux go build -ldflags="-s -w" -o bin/bootstrap functions/$$function/main.go ; \
+		zip -j bin/$$function.zip bin/bootstrap; \
 	done
