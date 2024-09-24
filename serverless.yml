@@ -29,6 +29,8 @@ custom:
     hooks:
       before:package:createDeploymentArtifacts:
 #       for windows
-        - build-and-zip.ps1
+#        - build-and-zip.ps1
+#        for linux like
+        - make build
       after:package:createDeploymentArtifacts:
         - echo "Build and packaging complete"
