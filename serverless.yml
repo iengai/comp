@@ -28,7 +28,6 @@ custom:
   scriptable:
     hooks:
       before:package:createDeploymentArtifacts:
-#       for windows
-        - build-and-zip.ps1
+        - docker-compose up go-builder
       after:package:createDeploymentArtifacts:
         - echo "Build and packaging complete"
