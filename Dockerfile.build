@@ -1,0 +1,14 @@
+FROM golang:1.23
+
+RUN apt-get update && apt-get install -y zip && apt-get clean
+
+WORKDIR /app
+
+COPY . .
+
+RUN mkdir -p bin
+
+ENV GOARCH=arm64
+ENV GOOS=linux
+
+CMD ["bash", "./build-and-zip.sh"]

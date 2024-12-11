@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  go-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    volumes:
+      - .:/app
+    working_dir: /app
