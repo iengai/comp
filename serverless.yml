@@ -1,3 +1,7 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: nopee
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: auth
 service: comp
 
 provider:
@@ -7,6 +11,10 @@ provider:
   profile: kk
   region: ap-northeast-1
   memorySize: 128
+  stage: ${opt:stage, 'dev'}
+  environment:
+    USER_POOL_NAME: ${self:service}-${self:provider.stage}-user-pool
+    USER_POOL_CLIENT_NAME: ${self:provider.environment.USER_POOL_NAME}-client
 
 package:
   individually: true
@@ -15,14 +23,86 @@ plugins:
   - serverless-scriptable-plugin
 
 functions:
-  hello-world:
+  define-auth-challenge:
     handler: handler
     package:
-      artifact: bin/hello-world.zip
+      artifact: bin/define-auth-challenge.zip
     events:
-      - http:
-          path: /hello
-          method: get
+      - cognitoUserPool:
+          pool: CompUserPool
+          trigger: DefineAuthChallenge
+
+  create-auth-challenge:
+    handler: handler
+    package:
+      artifact: bin/create-auth-challenge.zip
+    policies:
+      - Effect: Allow
+        Action:
+          - ses:SendEmail
+        Resource: "*"
+    events:
+      - cognitoUserPool:
+          pool: CompUserPool
+          trigger: CreateAuthChallenge
+
+  verify-auth-challenge-response:
+    handler: handler
+    package:
+      artifact: bin/verify-auth-challenge-response.zip
+    events:
+      - cognitoUserPool:
+          pool: CompUserPool
+          trigger: VerifyAuthChallengeResponse
+
+  post-authentication:
+    handler: handler
+    package:
+      artifact: bin/post-authentication.zip
+    events:
+      - cognitoUserPool:
+          pool: CompUserPool
+          trigger: PostAuthentication
+
+#  pre-signup:
+#    handler: handler
+#    package:
+#      artifact: bin/pre-signup.zip
+#    events:
+#      - cognitoUserPool:
+#          pool: CompUserPool
+#          trigger: PreSignUp
+
+resources:
+  Resources:
+    CognitoUserPoolCompUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:provider.environment.USER_POOL_NAME}
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: false
+            RequireNumbers: false
+            RequireSymbols: false
+            RequireUppercase: false
+          SignInPolicy:
+            AllowedFirstAuthFactors:
+              - EMAIL_OTP
+              - PASSWORD
+        UsernameAttributes:
+          - email
+
+    CompUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:provider.environment.USER_POOL_CLIENT_NAME}
+        UserPoolId: !Ref CognitoUserPoolCompUserPool
+        GenerateSecret: false
+        ExplicitAuthFlows:
+          - CUSTOM_AUTH_FLOW_ONLY
 
 custom:
   scriptable:
