@@ -13,14 +13,27 @@ provider:
   memorySize: 128
   stage: ${opt:stage, 'dev'}
   environment:
-    USER_POOL_NAME: ${self:service}-${self:provider.stage}-user-pool
-    USER_POOL_CLIENT_NAME: ${self:provider.environment.USER_POOL_NAME}-client
+    MAILER_NO_REPLY: ${env:MAILER_NO_REPLY, file(./env-${self:provider.stage}.yaml):MAILER_NO_REPLY}
+#  iam:
+#    role:
+#      name: ${self:service}-${self:provider.stage}-ses-send-email-role
+#      statements:
+#        - Effect: Allow
+#          Action:
+#            - ses:SendEmail
+#          Resource: "*"
+
+
+parameters:
+  USER_POOL_NAME: ${self:service}-${self:provider.stage}-user-pool
+  USER_POOL_CLIENT_NAME: ${self:parameters.USER_POOL_NAME}-client
 
 package:
   individually: true
 
 plugins:
   - serverless-scriptable-plugin
+  - serverless-iam-roles-per-function
 
 functions:
   define-auth-challenge:
@@ -36,7 +49,8 @@ functions:
     handler: handler
     package:
       artifact: bin/create-auth-challenge.zip
-    policies:
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
       - Effect: Allow
         Action:
           - ses:SendEmail
@@ -78,7 +92,7 @@ resources:
     CognitoUserPoolCompUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        UserPoolName: ${self:provider.environment.USER_POOL_NAME}
+        UserPoolName: ${self:parameters.USER_POOL_NAME}
         AutoVerifiedAttributes:
           - email
         Policies:
@@ -98,7 +112,7 @@ resources:
     CompUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
-        ClientName: ${self:provider.environment.USER_POOL_CLIENT_NAME}
+        ClientName: ${self:parameters.USER_POOL_CLIENT_NAME}
         UserPoolId: !Ref CognitoUserPoolCompUserPool
         GenerateSecret: false
         ExplicitAuthFlows:

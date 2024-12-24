@@ -4,3 +4,8 @@ vendor
 *.coverprofile
 
 ./.idea
+
+# ignore all env-*.yaml
+env*.yaml
+# exclude env-sample.yaml
+!env-sample.yaml
