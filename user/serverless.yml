@@ -1,7 +1,7 @@
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
 org: nopee
 # "app" enables Serverless Framework Dashboard features and sharing them with other Services.
-app: auth # todo change to comp
+app: comp
 service: user
 
 provider:
