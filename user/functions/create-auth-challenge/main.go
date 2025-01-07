@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
+	"regexp"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -41,39 +43,40 @@ func init() {
 func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthChallenge) (events.CognitoEventUserPoolsCreateAuthChallenge, error) {
 	log.Printf("Received event: %+v\n", event)
 
+	// Extract the email from user attributes
+	email := event.Request.UserAttributes["email"]
+	if email == "" {
+		return event, fmt.Errorf("email attribute is missing")
+	}
+	var otp string
 	// Check if this is the first challenge attempt or if the last challenge was successful
-	if len(event.Request.Session) == 0 || event.Request.Session[len(event.Request.Session)-1].ChallengeResult {
+	if len(event.Request.Session) > 0 {
 		// Generate a 6-digit OTP
-		otp := generateOTP()
+		otp = generateOTP()
 		log.Printf("Generated OTP: %s\n", otp)
-
-		// Extract the email from user attributes
-		email := event.Request.UserAttributes["email"]
-		if email == "" {
-			return event, fmt.Errorf("email attribute is missing")
-		}
 
 		// Simulate sending the OTP to the user's email
 		if err := sendOTP(ctx, email, otp); err != nil {
 			log.Printf("Failed to send OTP: %v\n", err)
 			return event, err
 		}
-
-		// Set the public and private challenge parameters
-		event.Response.PublicChallengeParameters = map[string]string{
-			"email": email,
-		}
-		event.Response.PrivateChallengeParameters = map[string]string{
-			"otp": otp,
-		}
-		event.Response.ChallengeMetadata = fmt.Sprintf("CODE-%s", otp)
 	} else {
-		// If the last challenge was unsuccessful, no new challenge is generated
-		event.Response.PublicChallengeParameters = map[string]string{}
-		event.Response.PrivateChallengeParameters = map[string]string{}
-		event.Response.ChallengeMetadata = ""
+		preChallenge := event.Request.Session[len(event.Request.Session)-1]
+		re := regexp.MustCompile(`CODE-(\d*)`)
+		matches := re.FindStringSubmatch(preChallenge.ChallengeMetadata)
+		otp = matches[1]
+		if len(matches) < 2 {
+			return event, errors.New("no match found for CODE-(\\d*)")
+		}
 	}
 
+	event.Response.PublicChallengeParameters = map[string]string{
+		"email": email,
+	}
+	event.Response.PrivateChallengeParameters = map[string]string{
+		"otp": otp,
+	}
+	event.Response.ChallengeMetadata = fmt.Sprintf("CODE-%s", otp)
 	return event, nil
 }
 

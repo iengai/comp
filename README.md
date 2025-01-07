@@ -1,4 +1,5 @@
 ## deploy
 ```
-serverless deploy --stage {env}
+cd {service}
+sls deploy --stage {env}
 ```

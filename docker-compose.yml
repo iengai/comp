@@ -8,3 +8,6 @@ services:
     volumes:
       - .:/app
     working_dir: /app
+    environment:
+      SERVICE: "${SERVICE:?SERVICE is required}"
+    command: ["bash", "-c", "./build-and-zip.sh $SERVICE"]

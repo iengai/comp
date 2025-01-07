@@ -1,4 +1,4 @@
-bin/**
+**/bin/**
 vendor
 .serverless
 *.coverprofile
@@ -6,6 +6,8 @@ vendor
 ./.idea
 
 # ignore all env-*.yaml
-env*.yaml
+**/env*.yaml
 # exclude env-sample.yaml
-!env-sample.yaml
+!**/env-sample.yaml
+
+./node_modules

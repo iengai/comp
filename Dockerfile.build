@@ -11,4 +11,3 @@ RUN mkdir -p bin
 ENV GOARCH=arm64
 ENV GOOS=linux
 
-CMD ["bash", "./build-and-zip.sh"]

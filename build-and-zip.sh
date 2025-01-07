@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# Ensure a service parameter is provided
+if [ -z "$1" ]; then
+  echo "Error: Service parameter is required."
+  echo "Usage: $0 <service>"
+  exit 1
+fi
+
+# Set the service name from the first argument
+service="$1"
+
+# Change to the working directory
+cd "$service" || {
+  echo "Error: Failed to change to directory $service"
+  exit 1
+}
+
+
 # Set build environment variables
 export GOARCH="arm64"
 export GOOS="linux"
@@ -22,7 +39,7 @@ for dir in "$functionsRoot"/*/; do
     outputZip="$outputDir/$folderName.zip"
 
     # Build the Go binary
-    echo "Building $mainFilePath..."
+    echo "Building $mainFilePath for service $service..."
     go build -ldflags="-s -w" -o "$outputBinary" "$mainFilePath"
 
     # Compress the binary into a ZIP file

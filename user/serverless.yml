@@ -1,8 +1,8 @@
 # "org" ensures this Service is used with the correct Serverless Framework Access Key.
 org: nopee
 # "app" enables Serverless Framework Dashboard features and sharing them with other Services.
-app: auth
-service: comp
+app: auth # todo change to comp
+service: user
 
 provider:
   name: aws
@@ -14,10 +14,12 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     MAILER_NO_REPLY: ${env:MAILER_NO_REPLY, file(./env-${self:provider.stage}.yaml):MAILER_NO_REPLY}
+    AUTH_TABLE: ${env:AUTH_TABLE, file(./env-${self:provider.stage}.yaml):AUTH_TABLE}
 
 parameters:
-  USER_POOL_NAME: ${self:service}-${self:provider.stage}-user-pool
-  USER_POOL_CLIENT_NAME: ${self:parameters.USER_POOL_NAME}-client
+  PREFIX: ${self:service}-${self:provider.stage}
+  USER_POOL_NAME: ${self:parameters.PREFIX}-user-pool
+  USER_POOL_CLIENT_NAME: ${self:parameters.PREFIX}-user-pool-client
 
 package:
   individually: true
@@ -77,6 +79,21 @@ functions:
 #      - cognitoUserPool:
 #          pool: CompUserPool
 #          trigger: PreSignUp
+#
+#  post-confirmation:
+#    handler: handler
+#    package:
+#      artifact: bin/post-confirmation.zip
+#    iamRoleStatementsInherit: true
+#    iamRoleStatements:
+#      - Effect: Allow
+#        Action:
+#          - ses:SendEmail # 如果需要发送邮件
+#        Resource: "*"
+#    events:
+#      - cognitoUserPool:
+#          pool: CompUserPool
+#          trigger: PostConfirmation
 
 resources:
   Resources:
@@ -99,7 +116,6 @@ resources:
               - PASSWORD
         UsernameAttributes:
           - email
-
     CompUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
       Properties:
@@ -109,10 +125,25 @@ resources:
         ExplicitAuthFlows:
           - CUSTOM_AUTH_FLOW_ONLY
 
+#    AuthTable:
+#      Type: AWS::DynamoDB::Table
+#      Properties:
+#        TableName: ${self:parameters.PREFIX}-${self:environment.AUTH_TABLE}
+#        AttributeDefinitions:
+#          - AttributeName: PK
+#            AttributeType: S  # S: String, N: Number, B: Binary
+#        KeySchema:
+#          - AttributeName: SK
+#            KeyType: HASH     # HASH: Partition Key, RANGE: Sort Key
+#        BillingMode: PAY_PER_REQUEST # optional：PROVISIONED
+#        TimeToLiveSpecification:
+#          AttributeName: ttl
+#          Enabled: true
+
 custom:
   scriptable:
     hooks:
       before:package:createDeploymentArtifacts:
-        - docker-compose up go-builder
+        - SERVICE=${self:service} docker-compose -f ../docker-compose.yml up go-builder
       after:package:createDeploymentArtifacts:
         - echo "Build and packaging complete"
