@@ -14,15 +14,6 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     MAILER_NO_REPLY: ${env:MAILER_NO_REPLY, file(./env-${self:provider.stage}.yaml):MAILER_NO_REPLY}
-#  iam:
-#    role:
-#      name: ${self:service}-${self:provider.stage}-ses-send-email-role
-#      statements:
-#        - Effect: Allow
-#          Action:
-#            - ses:SendEmail
-#          Resource: "*"
-
 
 parameters:
   USER_POOL_NAME: ${self:service}-${self:provider.stage}-user-pool
