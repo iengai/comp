@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
 	"regexp"
 	"time"
 
@@ -16,7 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	"github.com/caarlos0/env/v11"
-	"github.com/iengai/comp/functions"
+	"github.com/iengai/comp/user/functions"
+	"github.com/iengai/comp/user/internal/domain"
 )
 
 var (
@@ -52,7 +52,7 @@ func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthCh
 	// Check if this is the first challenge attempt or if the last challenge was successful
 	if len(event.Request.Session) > 0 {
 		// Generate a 6-digit OTP
-		otp = generateOTP()
+		otp = domain.NewCode(time.Now()).ToString()
 		log.Printf("Generated OTP: %s\n", otp)
 
 		// Simulate sending the OTP to the user's email
@@ -78,12 +78,6 @@ func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthCh
 	}
 	event.Response.ChallengeMetadata = fmt.Sprintf("CODE-%s", otp)
 	return event, nil
-}
-
-// generateOTP generates a random 6-digit OTP
-func generateOTP() string {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	return fmt.Sprintf("%06d", r.Intn(1000000))
 }
 
 // sendOTP simulates sending an OTP to the user's email
