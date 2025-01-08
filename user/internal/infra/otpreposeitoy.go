@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	otpTTLSeconds = 84000
+	otpTTL = 24 * time.Hour
 )
 
 type (
@@ -37,7 +37,7 @@ type (
 		Used      bool      `dynamodbav:"used"`
 		CreatedAt time.Time `dynamodbav:"created_at"`
 		UpdatedAt time.Time `dynamodbav:"updated_at"`
-		TTL       time.Time `dynamodbav:"ttl"`
+		TTL       int64     `dynamodbav:"ttl"`
 	}
 )
 
@@ -101,7 +101,7 @@ func (o otpRepository) toData(d *domain.OTP) *OTP {
 		Used:      d.Used,
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,
-		TTL:       d.ExpiredAt.Add(otpTTLSeconds),
+		TTL:       d.ExpiredAt.Add(otpTTL).Unix(),
 	}
 }
 
