@@ -14,7 +14,7 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     MAILER_NO_REPLY: ${env:MAILER_NO_REPLY, file(./env-${self:provider.stage}.yaml):MAILER_NO_REPLY}
-    AUTH_TABLE: ${env:AUTH_TABLE, file(./env-${self:provider.stage}.yaml):AUTH_TABLE}
+#    AUTH_TABLE: ${env:AUTH_TABLE, file(./env-${self:provider.stage}.yaml):AUTH_TABLE}
 
 parameters:
   PREFIX: ${self:service}-${self:provider.stage}
@@ -71,14 +71,40 @@ functions:
           pool: CompUserPool
           trigger: PostAuthentication
 
-#  pre-signup:
-#    handler: handler
-#    package:
-#      artifact: bin/pre-signup.zip
-#    events:
-#      - cognitoUserPool:
-#          pool: CompUserPool
-#          trigger: PreSignUp
+  pre-signup:
+    handler: handler
+    package:
+      artifact: bin/pre-signup.zip
+    events:
+      - cognitoUserPool:
+          pool: CompUserPool
+          trigger: PreSignUp
+
+  verify-signup:
+    handler: handler
+    package:
+      artifact: bin/verify-signup.zip
+    environment:
+      USER_POOL_ID: !Ref CognitoUserPoolCompUserPool
+      BASE_API_URL:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: ApiGatewayRestApi
+            - ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/"
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminConfirmSignUp
+          - cognito-idp:AdminUpdateUserAttributes
+          - cognito-idp:AdminGetUser
+        Resource:
+          - "arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:resources.Resources.CognitoUserPoolCompUserPool.Properties.UserPoolName}"
+    events:
+      - http:
+          path: verify-signup
+          method: get
+          cors: true
 #
 #  post-confirmation:
 #    handler: handler
@@ -139,6 +165,17 @@ resources:
 #        TimeToLiveSpecification:
 #          AttributeName: ttl
 #          Enabled: true
+
+  Outputs:
+    ApiUrl:
+      Value:
+        Fn::Join:
+          - ""
+          - - "https://"
+            - Ref: ApiGatewayRestApi
+            - ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}/"
+      Export:
+        Name: ApiUrl-${self:service}-${self:provider.stage}
 
 custom:
   scriptable:

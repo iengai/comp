@@ -1,1 +1,2 @@
 MAILER_NO_REPLY: example@email.com
+AUTH_TABLE: auth-table

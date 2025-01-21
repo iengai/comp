@@ -10,4 +10,4 @@ vendor
 # exclude env-sample.yaml
 !**/env-sample.yaml
 
-./node_modules
+/node_modules/
