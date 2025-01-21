@@ -19,31 +19,25 @@ const (
 )
 
 type (
-	OTPRepository interface {
-		Get(ctx context.Context, id uuid.UUID) (*domain.OTP, error)
-		Save(ctx context.Context, otp *domain.OTP) error
-	}
-
 	otpRepository struct {
 		db    *dynamodb.Client
 		table string
 	}
 
 	OTP struct {
-		PK        string    `dynamodbav:"PK"`
-		SK        string    `dynamodbav:"SK"`
-		ExpiredAt time.Time `dynamodbav:"expired_at"`
-		Code      string    `dynamodbav:"code"`
-		Used      bool      `dynamodbav:"used"`
-		CreatedAt time.Time `dynamodbav:"created_at"`
-		UpdatedAt time.Time `dynamodbav:"updated_at"`
-		TTL       int64     `dynamodbav:"ttl"`
+		PK             string    `dynamodbav:"PK"`
+		SK             string    `dynamodbav:"SK"`
+		ExpiredAt      time.Time `dynamodbav:"expired_at"`
+		Code           string    `dynamodbav:"code"`
+		Used           bool      `dynamodbav:"used"`
+		FailedAttempts int       `dynamodbav:"failed_attempts"`
+		LockoutAt      time.Time `dynamodbav:"lockout_at"`
+		SentAt         time.Time `dynamodbav:"sent_at"`
+		CreatedAt      time.Time `dynamodbav:"created_at"`
+		UpdatedAt      time.Time `dynamodbav:"updated_at"`
+		TTL            int64     `dynamodbav:"ttl"`
 	}
 )
-
-func (o OTP) IsExpired(now time.Time) bool {
-	return o.ExpiredAt.After(now)
-}
 
 func (o otpRepository) Get(ctx context.Context, id uuid.UUID) (*domain.OTP, error) {
 	input := &dynamodb.GetItemInput{
@@ -74,6 +68,8 @@ func (o otpRepository) toDomain(data *OTP) *domain.OTP {
 		ExpiredAt: data.ExpiredAt,
 		Code:      domain.Code(data.Code),
 		Used:      data.Used,
+		LockoutAt: data.LockoutAt,
+		SentAt:    data.SentAt,
 		CreatedAt: data.CreatedAt,
 		UpdatedAt: data.UpdatedAt,
 	}
@@ -99,9 +95,11 @@ func (o otpRepository) toData(d *domain.OTP) *OTP {
 		ExpiredAt: d.ExpiredAt,
 		Code:      string(d.Code),
 		Used:      d.Used,
+		LockoutAt: d.LockoutAt,
+		SentAt:    d.SentAt,
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,
-		TTL:       d.ExpiredAt.Add(otpTTL).Unix(),
+		TTL:       d.UpdatedAt.Add(otpTTL).Unix(),
 	}
 }
 
@@ -113,7 +111,7 @@ func (o otpRepository) pk() string {
 	return "otp"
 }
 
-func NewOTPRepository(table string, db *dynamodb.Client) OTPRepository {
+func NewOTPRepository(table string, db *dynamodb.Client) domain.OTPRepository {
 	return &otpRepository{
 		table: table,
 		db:    db,
