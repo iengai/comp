@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -54,10 +54,10 @@ func (h handler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 			Username:   aws.String(email),
 		})
 	if err != nil {
-		log.Printf("Failed to get user: %v", err)
+		slog.Error("unable to get user", slog.String("err", err.Error()))
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body:       fmt.Sprintf(`{"message":"get user failed","error":"%s"}`, err.Error()),
+			Body:       `{"message":"get user failed","error":"%s"}`,
 		}, nil
 	}
 	var emailVerified, userConfirmed bool
@@ -91,9 +91,10 @@ func (h handler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 				},
 			})
 		if err != nil {
+			slog.Error("unable to verify email", slog.String("err", err.Error()))
 			return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusInternalServerError,
-				Body:       fmt.Sprintf(`{"message":"email verification failed","error":"%s"}`, err.Error()),
+				Body:       `{"message":"email verification failed"}`,
 			}, nil
 		}
 	}
@@ -104,9 +105,10 @@ func (h handler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 			Username:   aws.String(email),
 		})
 	if err != nil {
+		slog.Error("unable to confirm user", slog.String("err", err.Error()))
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusInternalServerError,
-			Body:       fmt.Sprintf(`{"message":"user confirmation failed","error":"%s"}`, err.Error()),
+			Body:       `{"message":"user confirmation failed"}`,
 		}, nil
 	}
 
