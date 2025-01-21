@@ -10,19 +10,24 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
-	"github.com/aws/aws-sdk-go-v2/service/ses/types"
 	"github.com/caarlos0/env/v11"
 	"github.com/iengai/comp/user/functions"
 	"github.com/iengai/comp/user/internal/domain"
+	"github.com/iengai/comp/user/internal/usecase"
 )
 
 var (
 	sesClient     *ses.Client
 	mailerNoReply string
 )
+
+var h handler
+
+type handler struct {
+	sendOTP usecase.SendOTPViaEmail
+}
 
 func init() {
 	c, err := env.ParseAs[functions.Config]()
@@ -36,11 +41,13 @@ func init() {
 	}
 
 	sesClient = ses.NewFromConfig(cfg)
-	log.Println("SES client initialized successfully")
+	h = handler{
+		sendOTP: usecase.NewSendOTPViaEmail(ses.NewFromConfig(cfg), c.MailerNoReply),
+	}
 }
 
-// handler is the entry point for the Lambda function
-func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthChallenge) (events.CognitoEventUserPoolsCreateAuthChallenge, error) {
+// Handle is the entry point for the Lambda function
+func (h handler) Handle(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthChallenge) (events.CognitoEventUserPoolsCreateAuthChallenge, error) {
 	log.Printf("Received event: %+v\n", event)
 
 	// Extract the email from user attributes
@@ -56,7 +63,7 @@ func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthCh
 		log.Printf("Generated OTP: %s\n", otp)
 
 		// Simulate sending the OTP to the user's email
-		if err := sendOTP(ctx, email, otp); err != nil {
+		if err := h.sendOTP.Execute(ctx, usecase.NewSendOTPViaEmailCommand(otp, email)); err != nil {
 			log.Printf("Failed to send OTP: %v\n", err)
 			return event, err
 		}
@@ -80,36 +87,6 @@ func handler(ctx context.Context, event events.CognitoEventUserPoolsCreateAuthCh
 	return event, nil
 }
 
-// sendOTP simulates sending an OTP to the user's email
-func sendOTP(ctx context.Context, email, otp string) error {
-	log.Printf("Sending OTP %s to email: %s, from address: %s\n", otp, email, mailerNoReply)
-	subject := "Your OTP Code"
-	body := fmt.Sprintf("Your OTP code is: %s", otp)
-
-	input := &ses.SendEmailInput{
-		Source: aws.String(mailerNoReply),
-		Destination: &types.Destination{
-			ToAddresses: []string{email},
-		},
-		Message: &types.Message{
-			Subject: &types.Content{
-				Data: aws.String(subject),
-			},
-			Body: &types.Body{
-				Text: &types.Content{
-					Data: aws.String(body),
-				},
-			},
-		},
-	}
-	_, err := sesClient.SendEmail(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to send email: %w", err)
-	}
-	log.Printf("Email sent successfully to %s", email)
-	return nil
-}
-
 func main() {
-	lambda.Start(handler)
+	lambda.Start(h.Handle)
 }
