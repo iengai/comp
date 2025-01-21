@@ -99,7 +99,14 @@ functions:
           - cognito-idp:AdminUpdateUserAttributes
           - cognito-idp:AdminGetUser
         Resource:
-          - "arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:resources.Resources.CognitoUserPoolCompUserPool.Properties.UserPoolName}"
+          - Fn::Join:
+              - ""
+              - - "arn:aws:cognito-idp:"
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":userpool/"
+                - !Ref CognitoUserPoolCompUserPool
     events:
       - http:
           path: verify-signup

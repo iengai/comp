@@ -57,7 +57,7 @@ func (h handler) Handle(ctx context.Context, req events.APIGatewayProxyRequest) 
 		slog.Error("unable to get user", slog.String("err", err.Error()))
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body:       `{"message":"get user failed","error":"%s"}`,
+			Body:       `{"message":"unable to get user"}`,
 		}, nil
 	}
 	var emailVerified, userConfirmed bool
